@@ -151,6 +151,14 @@ struct HidIo {
     }
 };
 
+static std::wstring HashW(std::wstring const& s) {
+    unsigned long long h = 1469598103934665603ULL;
+    for (wchar_t c : s) { h ^= (unsigned long long)c; h *= 1099511628211ULL; }
+    wchar_t buf[24];
+    swprintf_s(buf, L"%016llX", h);
+    return buf;
+}
+
 static bool ContainsNoCase(const std::wstring& s, const wchar_t* sub) {
     std::wstring a = s, b = sub;
     for (auto& c : a) c = towlower(c);
@@ -239,7 +247,7 @@ private:
         if (!ok) return false;
 
         Device dev;
-        dev.id = L"compx:" + std::to_wstring(d.vid) + L":" + std::to_wstring(d.pid);
+        dev.id = L"compx:" + std::to_wstring(d.vid) + L":" + HashW(d.product);
         dev.kind = Kind::Mouse;
         if (ContainsNoCase(d.product, L"keyboard") || ContainsNoCase(d.product, L"kbd")) dev.kind = Kind::Keyboard;
         dev.name = dev.kind == Kind::Keyboard ? L"Клавиатура" : L"Мышь";
@@ -301,7 +309,7 @@ private:
         int pct = bat[0];
         if (pct < 0 || pct > 100) return false;
         Device dev;
-        dev.id = L"compx2:" + std::to_wstring(d.vid) + L":" + std::to_wstring(d.pid);
+        dev.id = L"compx2:" + std::to_wstring(d.vid) + L":" + HashW(d.product);
         dev.kind = Kind::Mouse;
         dev.name = L"Мышь";
         dev.source = L"2.4 ГГц";
@@ -334,7 +342,7 @@ private:
         io.Close();
         if (!ok) return false;
         Device dev;
-        dev.id = L"vgn-kbd:" + std::to_wstring(d.vid) + L":" + std::to_wstring(d.pid);
+        dev.id = L"vgn-kbd:" + std::to_wstring(d.vid) + L":" + HashW(d.product);
         dev.kind = Kind::Keyboard;
         dev.name = L"Клавиатура";
         dev.source = L"2.4 ГГц";
@@ -569,7 +577,7 @@ public:
                 HidD_FreePreparsedData(pp);
                 if (st == HIDP_STATUS_SUCCESS && val <= 100) {
                     Device dev;
-                    dev.id = L"hid:" + std::to_wstring(d.vid) + L":" + std::to_wstring(d.pid) + L":" + std::to_wstring(d.usagePage) + L":" + std::to_wstring(d.usage);
+                    dev.id = L"hid:" + HashW(d.path);
                     dev.name = d.product.empty() ? std::wstring(L"USB-устройство") : d.product;
                     dev.source = L"USB";
                     dev.kind = d.usagePage == 0x01 ? (d.usage == 0x02 ? Kind::Mouse : (d.usage == 0x06 ? Kind::Keyboard : Kind::Other)) : Kind::Other;

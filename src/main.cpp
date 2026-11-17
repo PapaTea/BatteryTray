@@ -172,6 +172,30 @@ static std::vector<Device> VisibleDevices(std::wstring& tip) {
             list.push_back(d);
         }
     }
+    // дубли по типу+названию (устройство могло «переехать» на другой PID/канал) — берём самое свежее
+    {
+        std::map<std::wstring, size_t> best;
+        std::vector<bool> drop(list.size(), false);
+        for (size_t i = 0; i < list.size(); ++i) {
+            std::wstring key = std::to_wstring((int)list[i].kind) + L"|" + list[i].name;
+            auto it = best.find(key);
+            if (it == best.end()) {
+                best[key] = i;
+            } else {
+                if (list[i].ts >= list[it->second].ts) {
+                    drop[it->second] = true;
+                    it->second = i;
+                } else {
+                    drop[i] = true;
+                }
+            }
+        }
+        std::vector<Device> kept;
+        for (size_t i = 0; i < list.size(); ++i)
+            if (!drop[i]) kept.push_back(list[i]);
+        list.swap(kept);
+    }
+
     // из нескольких Apple-устройств показываем только ближайшее (самый сильный сигнал)
     {
         int best = -1, bestIdx = -1;
